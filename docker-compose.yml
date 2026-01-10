@@ -1,0 +1,95 @@
+services:
+  redis-ins:
+    image: redis/redisinsight:latest
+    ports:
+      - "5540:5540"
+    volumes:
+      - redisins_data:/data
+    networks:
+      - gotvimsii_backend
+
+  auth-ms:
+    build: ./gotvimsii-ms/auth-ms
+    ports:
+      - "7240:7240"
+    env_file:
+      - config/.env.auth-ms
+    networks:
+      - gotvimsii_backend
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      auth-redis:
+        condition: service_healthy
+    restart: on-failure
+
+  session-ms:
+    image: azul/zulu-openjdk-alpine:21-jre-headless-latest
+    env_file:
+      - config/.env.sess-ms
+    volumes:
+      - ./gotvimsii-ms/session-ms/build/libs/session-ms-all.jar:/app/sessms.jar
+    command: ["java", "-jar", "/app/sessms.jar", "-P:migrate=migrate" ]
+    networks:
+      - gotvimsii_backend
+    depends_on:
+      session-db:
+        condition: service_healthy
+    restart: on-failure
+
+  auth-redis:
+    image: redis:8.4.0-alpine
+    restart: on-failure
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    volumes:
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf
+      - auth_redis_data:/data
+    networks:
+      - gotvimsii_backend
+    depends_on:
+      redis-ins:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli", "PING" ]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+
+  auth-db:
+    image: postgres:16-alpine
+    restart: on-failure
+    env_file:
+      - config/.env.auth-db
+    volumes:
+      - gs_auth_data:/var/lib/postgresql/data
+    networks:
+      - gotvimsii_backend
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+
+  session-db:
+    image: postgres:16-alpine
+    restart: on-failure
+    env_file:
+      - config/.env.sess-db
+    volumes:
+      - gs_sess_data:/var/lib/postgresql/data
+    networks:
+      - gotvimsii_backend
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  gs_auth_data:
+  gs_sess_data:
+  auth_redis_data:
+  redisins_data:
+
+networks:
+  gotvimsii_backend:

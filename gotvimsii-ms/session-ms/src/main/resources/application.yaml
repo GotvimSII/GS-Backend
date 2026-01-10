@@ -1,0 +1,6 @@
+ktor:
+    application:
+        modules:
+            - na.gotvimsii.microservices.sessms.ApplicationKt.module
+    deployment:
+        port: $HOST_PORT
