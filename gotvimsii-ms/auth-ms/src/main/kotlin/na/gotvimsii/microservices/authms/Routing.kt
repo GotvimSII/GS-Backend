@@ -19,6 +19,7 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.*
+import io.ktor.server.plugins.swagger.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -57,6 +58,8 @@ fun Application.configureRouting(jsonModule: Json) {
     }
 
     routing {
+        swaggerUI("/docs", "openapi/documentation.v1.yaml")
+
         get("/ping") {
             call.respondText("pong :)")
         }
@@ -249,7 +252,7 @@ fun Application.configureRouting(jsonModule: Json) {
                 val oldRefreshToken = refreshRequest.refreshToken
                 val sessionId = refreshRequest.sessionId
 
-                val decoded = JwtProvider.verifier().verify(oldRefreshToken)
+                val decoded = JwtProvider.verifier().verify(oldRefreshToken) // TODO match the `catch` messages to be more indicative of what went wrong
 
                 val tokenType = decoded.claims["type"]?.asString() ?: return@post call.respond(
                     HttpStatusCode.BadRequest,
@@ -349,16 +352,21 @@ fun Application.configureRouting(jsonModule: Json) {
                 val userId = call.principal<AuthUser>()!!.userId
 
                 try {
-                    val refreshHash = rethis.get("session:$sessionId", RefreshTokenHash.serializer()) ?: return@post call.respond(
+                    val refreshHash = rethis.get(
+                        "session:$sessionId",
+                        RefreshTokenHash.serializer()
+                    ) ?: return@post call.respond(
                         HttpStatusCode.NotFound,
                         ApiError("Session doesn't exist!")
                     )
 
-                    val redisEntry = rethis.get("refresh:${refreshHash.refreshTokenHash}", RedisSessionEntry.serializer())
-                        ?: return@post call.respond(
-                            HttpStatusCode.NotFound,
-                            ApiError("Session is no longer valid!")
-                        )
+                    val redisEntry = rethis.get(
+                        "refresh:${refreshHash.refreshTokenHash}",
+                        RedisSessionEntry.serializer()
+                    ) ?: return@post call.respond(
+                        HttpStatusCode.NotFound,
+                        ApiError("Session is no longer valid!")
+                    )
 
                     if (redisEntry.userId != userId) return@post call.respond(
                         HttpStatusCode.Forbidden,
@@ -409,7 +417,12 @@ fun Application.configureRouting(jsonModule: Json) {
 
                         for (sessionId in sessionIds) {
                             val redisRefreshToken = rethis.getDel("session:$sessionId") ?: continue
-                            val refreshTokenHash = jsonModule.decodeFromString(RefreshTokenHash.serializer(), redisRefreshToken).refreshTokenHash
+
+                            val refreshTokenHash = jsonModule.decodeFromString(
+                                RefreshTokenHash.serializer(),
+                                redisRefreshToken
+                            ).refreshTokenHash
+
                             rethis.del("refresh:$refreshTokenHash")
                         }
 

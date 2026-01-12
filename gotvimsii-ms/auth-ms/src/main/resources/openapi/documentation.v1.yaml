@@ -1,0 +1,418 @@
+openapi: 3.1.0
+info:
+  title: GotvimSII AuthMS
+  description: The GotvimSII Authentication Microservice Documentation
+  version: 1.0.0
+
+servers:
+  - url: /
+    description: Same-origin
+
+#TODO cleanup documentation
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    RegistrationCredentials:
+      type: object
+      required:
+        - email
+        - username
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        username:
+          type: string
+          example: johnDoe
+        password:
+          type: string
+          minLength: 10
+          example: super5ecurePassw0rd
+      description: User registration credentials.
+
+    LoginCredentials:
+      type: object
+      required:
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        username:
+          type: string
+          example: johnDoe
+        password:
+          type: string
+          example: super5ecurePassw0rd
+      description: User login credentials. Either email or username must be provided.
+
+    LoginResponse:
+      type: object
+      required:
+        - access_token
+        - refresh_token
+        - session_id
+      properties:
+        access_token:
+          type: string
+          description: Short-lived JWT access token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refresh_token:
+          type: string
+          description: Long-lived JWT refresh token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        session_id:
+          type: string
+          format: uuid
+          description: Session identifier
+          example: 9f1e0c52-4b13-4df3-9c0c-21c3c8f4d991
+
+    RefreshRequest:
+      type: object
+      required:
+        - refresh_token
+        - session_id
+      properties:
+        refresh_token:
+          type: string
+          description: Previously issued JWT refresh token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        session_id:
+          type: string
+          format: uuid
+          description: Session identifier for corresponding token
+          example: 9f1e0c52-4b13-4df3-9c0c-21c3c8f4d991
+
+    RefreshResponse:
+      type: object
+      required:
+        - access_token
+        - refresh_token
+      properties:
+        access_token:
+          type: string
+          description: New short-lived JWT access token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refresh_token:
+          type: string
+          description: Replacing long-lived JWT refresh token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    SessionID:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Session identifier
+          example: 9f1e0c52-4b13-4df3-9c0c-21c3c8f4d991
+
+    ApiSuccess:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: Created!
+
+    ApiError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+
+
+paths:
+  /ping:
+    get:
+      description: Verifies that the API is running (although if it weren't, documentation wouldn't be available).
+      responses:
+        200:
+          description: pong :)
+          content:
+            text/plain:
+              schema:
+                type: string
+              example:
+                pong :)
+
+  /register:
+    post:
+      summary: Register a new user
+      description: Creates a new user account with email, username and password.
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrationCredentials'
+
+      responses:
+        201:
+          description: User account successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+        400:
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                blankUsername:
+                  value:
+                    error: Username cannot be blank or empty!
+                invalidEmailFormat:
+                  value:
+                    error: Email format is invalid!
+                passwordTooShort:
+                  value:
+                    error: Password must be at least 10 characters long!
+
+        409:
+          description: Email or username already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                emailTaken:
+                  value:
+                    error: Email is already taken!
+
+                usernameTaken:
+                  value:
+                    error: Username is already taken!
+
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /login:
+    post:
+      summary: Authenticate user and spawn a new session
+      description: Authenticates a user using email or username and password. Returns access and refresh tokens and creates a new session.
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginCredentials'
+
+      responses:
+        200:
+          description: Successfully authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+
+        400:
+          description: Invalid credentials or malformed request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                malformedRequest:
+                  value:
+                    error: Invalid or malformed request format!
+
+                invalidCredentials:
+                  value:
+                    error: Invalid password!
+
+        404:
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                userNotFound:
+                  value:
+                    error: User not found!
+
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /refresh:
+    post:
+      summary: Refresh session
+      description: Exchanges a valid refresh token for new access and refresh tokens. Refresh tokens are single-use and are rotated on successful request.
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+
+      responses:
+        200:
+          description: Tokens successfully refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+
+        400:
+          description: Invalid or malformed refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                malformedRequest:
+                  value:
+                    error: Invalid or malformed request format!
+                noTypeClaim:
+                  value:
+                    error: No type claim!
+                noUserIdClaim:
+                  value:
+                    error: No userId claim!
+                wrongType:
+                  value:
+                    error: Not a refresh token!
+
+        401:
+          description: Refresh token is invalid, expired, or has been rotated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                rotated:
+                  value:
+                    error: Refresh token was changed, please log in again!
+
+        403:
+          description: Refresh token does not match the session or user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                forbidden:
+                  value:
+                    error: You are not authorized to perform this action!
+
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /logout:
+    post:
+      summary: Log out of a session
+      description: Logs the authenticated user out from a specific session. Requires a session ID.
+      operationId: logoutSession
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionID'
+
+      responses:
+        200:
+          description: Successfully logged out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+        400:
+          description: Missing or invalid session ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                missing:
+                  value:
+                    error: No session ID provided!
+
+        403:
+          description: Session does not belong to the authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                forbidden:
+                  value:
+                    error: You are not authorized to perform this action!
+
+        404:
+          description: Session does not exist or is no longer valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                notFound:
+                  value:
+                    error: Session doesn't exist!
+                invalidSession:
+                  value:
+                    error: Session is no longer valid!
+
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /logout/all:
+    post:
+      summary: Log out of all sessions
+      description: Logs the authenticated user out from all session.
+      operationId: logoutAllSessions
+      security:
+        - bearerAuth: [ ]
+      responses:
+        200:
+          description: Successfully logged out everywhere
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'

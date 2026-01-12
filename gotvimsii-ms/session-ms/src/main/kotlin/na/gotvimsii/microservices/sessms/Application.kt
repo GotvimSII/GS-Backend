@@ -12,8 +12,14 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
+    val jsonModule = Json {
+        prettyPrint = true
+        isLenient = true
+    }
+
     val shouldMigrate = environment.config.propertyOrNull("migrate")?.getString()
     val infoLogger: Logger = LoggerFactory.getLogger(this.javaClass.packageName.toString())
+
     if (shouldMigrate == "migrate") {
         infoLogger.info("Running with migrations...")
         DatabaseFactory.init(true)
@@ -21,12 +27,10 @@ fun Application.module() {
         infoLogger.info("Running without migrations...")
         DatabaseFactory.init(false)
     }
-    val jsonModule = Json {
-        prettyPrint = true
-        isLenient = true
-    }
+
     configureSerialization(jsonModule)
     configureRouting()
+
     monitor.subscribe(ApplicationStopping) {
         log.info("Stopping application gracefully...")
         DatabaseFactory.close()
