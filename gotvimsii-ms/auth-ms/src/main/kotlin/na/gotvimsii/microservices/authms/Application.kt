@@ -2,7 +2,7 @@ package na.gotvimsii.microservices.authms
 
 import io.ktor.server.application.*
 import io.ktor.server.netty.*
-import kotlinx.serialization.json.Json
+import io.ktor.util.*
 import na.gotvimsii.microservices.authms.database.DatabaseFactory
 import na.gotvimsii.microservices.authms.security.configureSecurity
 import org.slf4j.Logger
@@ -12,14 +12,12 @@ fun main(args: Array<String>) {
     EngineMain.main(args)
 }
 
+val Application.services: AppServices
+    get() = attributes[AttributeKey("AppServices")]
+
 fun Application.module() {
-    val jsonModule = Json {
-        prettyPrint = true
-        isLenient = true
-    }
-
-    configureSerialization(jsonModule)
-
+    configureServices()
+    configureSerialization()
     val shouldMigrate = environment.config.propertyOrNull("migrate")?.getString()
     val infoLogger: Logger = LoggerFactory.getLogger(this.javaClass.packageName.toString())
 
@@ -32,13 +30,15 @@ fun Application.module() {
     }
 
     configureSecurity()
-    configureRouting(jsonModule)
+    configureRouting()
 
     monitor.subscribe(ApplicationStopping) {
         log.info("Stopping application gracefully...")
         DatabaseFactory.close()
     }
     monitor.subscribe(ApplicationStopped) {
+        services.sessionClient.close()
+        services.redis.close()
         log.info("Application stopped.")
     }
     Runtime.getRuntime().addShutdownHook(

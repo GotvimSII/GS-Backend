@@ -2,7 +2,7 @@ package na.gotvimsii.microservices.sessms
 
 import io.ktor.server.application.*
 import io.ktor.server.netty.*
-import kotlinx.serialization.json.Json
+import io.ktor.util.*
 import na.gotvimsii.microservices.sessms.database.DatabaseFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -11,11 +11,11 @@ fun main(args: Array<String>) {
     EngineMain.main(args)
 }
 
+val Application.services: AppServices
+    get() = attributes[AttributeKey("AppServices")]
+
 fun Application.module() {
-    val jsonModule = Json {
-        prettyPrint = true
-        isLenient = true
-    }
+    configureServices()
 
     val shouldMigrate = environment.config.propertyOrNull("migrate")?.getString()
     val infoLogger: Logger = LoggerFactory.getLogger(this.javaClass.packageName.toString())
@@ -28,7 +28,7 @@ fun Application.module() {
         DatabaseFactory.init(false)
     }
 
-    configureSerialization(jsonModule)
+    configureSerialization()
     configureRouting()
 
     monitor.subscribe(ApplicationStopping) {

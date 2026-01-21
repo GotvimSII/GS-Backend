@@ -3,10 +3,10 @@ package na.gotvimsii.microservices.authms
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.contentnegotiation.*
-import kotlinx.serialization.json.Json
 
-fun Application.configureSerialization(jsonModule: Json) {
+fun Application.configureSerialization() {
+    val json = this.services.json
     install(ContentNegotiation) {
-        json(jsonModule)
+        json(json)
     }
 }
