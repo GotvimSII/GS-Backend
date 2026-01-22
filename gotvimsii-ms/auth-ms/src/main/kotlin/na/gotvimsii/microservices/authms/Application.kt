@@ -4,6 +4,8 @@ import io.ktor.server.application.*
 import io.ktor.server.netty.*
 import io.ktor.util.*
 import na.gotvimsii.microservices.authms.database.DatabaseFactory
+import na.gotvimsii.microservices.authms.helpers.AppServices
+import na.gotvimsii.microservices.authms.helpers.configureServices
 import na.gotvimsii.microservices.authms.security.configureSecurity
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory

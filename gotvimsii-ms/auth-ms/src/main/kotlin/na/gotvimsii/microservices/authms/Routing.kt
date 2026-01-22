@@ -11,7 +11,6 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
-import io.ktor.server.plugins.*
 import io.ktor.server.plugins.swagger.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -20,6 +19,7 @@ import na.gotvimsii.common.classes.*
 import na.gotvimsii.common.util.isNotEmail
 import na.gotvimsii.microservices.authms.database.UserEntity
 import na.gotvimsii.microservices.authms.database.UserTable
+import na.gotvimsii.microservices.authms.helpers.clientIp
 import na.gotvimsii.microservices.authms.security.JwtProvider
 import na.gotvimsii.microservices.authms.security.PasswordHasher
 import na.gotvimsii.microservices.authms.security.RedisRateLimit
@@ -188,7 +188,7 @@ fun Application.configureRouting() {
                     userId = user.id.value,
                     refreshTokenHash = refreshHash,
                     expiresAt = expiresAt,
-                    ipAddress = call.request.origin.remoteAddress,
+                    ipAddress = call.clientIp(),
                     userAgent = call.request.userAgent() // these two are SUPER easy to "hijack", but it's still something
                 )
 
@@ -301,7 +301,7 @@ fun Application.configureRouting() {
                     val updateSessionRequest = UpdateSessionRequest(
                         refreshTokenHash = newRefreshHash,
                         expiresAt = expiresAt,
-                        ipAddress = call.request.origin.remoteAddress,
+                        ipAddress = call.clientIp(),
                         userAgent = call.request.userAgent()
                     )
 

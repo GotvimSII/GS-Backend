@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: GotvimSII AuthMS
   description: The GotvimSII Authentication Microservice Documentation
-  version: 1.0.0
+  version: 1.1.0
 
 servers:
   - url: /
@@ -149,6 +149,14 @@ paths:
               example:
                 pong :)
 
+        429:
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry is allowed
+
   /register:
     post:
       summary: Register a new user
@@ -200,6 +208,14 @@ paths:
                 usernameTaken:
                   value:
                     error: Username is already taken!
+
+        429:
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry is allowed
 
         500:
           description: Internal server error
@@ -253,6 +269,14 @@ paths:
                 userNotFound:
                   value:
                     error: User not found!
+
+        429:
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry is allowed
 
         500:
           description: Internal server error
@@ -323,6 +347,14 @@ paths:
                   value:
                     error: You are not authorized to perform this action!
 
+        429:
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry is allowed
+
         500:
           description: Internal server error
           content:
@@ -387,6 +419,14 @@ paths:
                 invalidSession:
                   value:
                     error: Session is no longer valid!
+
+        429:
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry is allowed
 
         500:
           description: Internal server error

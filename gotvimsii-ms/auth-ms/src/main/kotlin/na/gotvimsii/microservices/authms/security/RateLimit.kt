@@ -4,10 +4,10 @@ import eu.vendeli.rethis.command.generic.expire
 import eu.vendeli.rethis.command.string.incr
 import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.plugins.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import na.gotvimsii.common.classes.ApiError
+import na.gotvimsii.microservices.authms.helpers.clientIp
 import na.gotvimsii.microservices.authms.services
 import kotlin.time.Duration.Companion.seconds
 
@@ -15,7 +15,7 @@ class RateLimitConfig {
     var requests: Long = 60
     var windowSeconds: Long = 60
     var keySelector: (ApplicationCall) -> String = { call ->
-        call.request.origin.remoteAddress
+        call.clientIp()
     }
 }
 

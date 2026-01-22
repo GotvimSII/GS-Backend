@@ -1,4 +1,4 @@
-package na.gotvimsii.microservices.authms
+package na.gotvimsii.microservices.authms.helpers
 
 import eu.vendeli.rethis.ReThis
 import eu.vendeli.rethis.types.common.RespVer
