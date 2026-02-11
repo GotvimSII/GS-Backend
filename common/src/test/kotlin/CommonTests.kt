@@ -8,13 +8,13 @@ import kotlin.test.assertEquals
 class CommonTests {
 
     @Test
-    fun testEnvironment() {
+    fun `test environment`() {
         val envValue = "TEST_VALUE"
         assertEquals(Environment["TEST_VALUE"], envValue)
     } // set via run window
 
     @Test
-    fun testCustomSerializationStandalone() {
+    fun `test custom UUID serialization`() {
         val json = Json {
             isLenient = true
             prettyPrint = true
@@ -24,6 +24,10 @@ class CommonTests {
         val encoded = json.encodeToString(serializer = UUIDSerializer, value = original)
         val decoded = json.decodeFromString(deserializer = UUIDSerializer, string = encoded)
 
-        assertEquals(original, decoded, "JSON doesn't work as intended...")
+        assertEquals(
+            original,
+            decoded,
+            "JSON didn't serialize properly. Expected: '$original'; Got: '$decoded'"
+        )
     }
 }

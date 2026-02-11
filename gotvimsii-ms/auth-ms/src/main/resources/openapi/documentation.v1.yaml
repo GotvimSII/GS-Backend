@@ -64,11 +64,11 @@ components:
         access_token:
           type: string
           description: Short-lived JWT access token
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+          example: eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...
         refresh_token:
           type: string
           description: Long-lived JWT refresh token
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+          example: eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...
         session_id:
           type: string
           format: uuid
@@ -84,7 +84,7 @@ components:
         refresh_token:
           type: string
           description: Previously issued JWT refresh token
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+          example: eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...
         session_id:
           type: string
           format: uuid
@@ -100,11 +100,11 @@ components:
         access_token:
           type: string
           description: New short-lived JWT access token
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+          example: eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...
         refresh_token:
           type: string
           description: Replacing long-lived JWT refresh token
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+          example: eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...
 
     SessionID:
       type: object
@@ -303,7 +303,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RefreshResponse'
+                $ref: '#/components/schemas/RefreshReyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9esponse'
 
         400:
           description: Invalid or malformed refresh token

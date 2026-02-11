@@ -30,6 +30,7 @@ fun Application.module() {
 
     configureSerialization()
     configureRouting()
+    configurePeriodicTasks()
 
     monitor.subscribe(ApplicationStopping) {
         log.info("Stopping application gracefully...")

@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "na.gotvimsii"
-version = "1.0.0"
+version = "1.2.0"
 
 repositories {
     mavenCentral()
@@ -12,6 +12,8 @@ repositories {
 
 dependencies {
     implementation(libs.ktor.server.auth.jwt)
+    implementation(libs.bouncycastle.bcprov.jdk18on)
+    implementation(libs.bouncycastle.bcpkix.jdk18on)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.dotenv.kotlin)

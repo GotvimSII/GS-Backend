@@ -13,7 +13,7 @@ fun Application.configureSecurity() {
     install(Authentication) {
         jwt("auth-jwt") {
             realm = JwtProvider.realm
-            verifier(JwtProvider.verifier())
+            verifier(JwtProvider.accessTokenVerifier())
             validate { credential ->
                 val userId = credential.payload.claims["userId"]?.asString()?.let(UUID::fromString)
                 userId?.let { AuthUser(it) }

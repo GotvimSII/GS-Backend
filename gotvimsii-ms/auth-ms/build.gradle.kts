@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "na.gotvimsii.microservices"
-version = "1.1.0"
+version = "1.2.0"
 
 tasks.shadowJar {
     mergeServiceFiles()
@@ -20,6 +20,8 @@ dependencies {
     implementation(project(":common"))
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.auth)
+    implementation(libs.bouncycastle.bcprov.jdk18on)
+    implementation(libs.bouncycastle.bcpkix.jdk18on)
     implementation(libs.ktor.server.auth.jwt)
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)

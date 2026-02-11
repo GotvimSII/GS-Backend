@@ -1,6 +1,7 @@
 .kotlin/
 config/
 gotvimsii-ms/README.md
+README.md
 .gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar

@@ -10,6 +10,11 @@ import java.time.Instant
 import java.util.*
 
 @Serializable
+data class PublicKeys(
+    val keys: List<Map<String, String>>
+)
+
+@Serializable
 data class RegistrationCredentials(
     val email: String,
     val username: String,

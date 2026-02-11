@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "na.gotvimsii.microservices"
-version = "1.1.0"
+version = "1.2.0"
 
 tasks.shadowJar {
     mergeServiceFiles()
@@ -32,6 +32,7 @@ dependencies {
     implementation(libs.ktor.server.netty)
     implementation(libs.logback.classic)
     implementation(libs.ktor.server.config.yaml)
+    implementation(libs.periodic.worker)
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.ktor.client.content.negotiation)
     testImplementation(libs.kotlin.test.junit)

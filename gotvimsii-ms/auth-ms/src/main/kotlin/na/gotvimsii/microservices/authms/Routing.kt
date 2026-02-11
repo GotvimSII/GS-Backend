@@ -20,6 +20,7 @@ import na.gotvimsii.common.util.isNotEmail
 import na.gotvimsii.microservices.authms.database.UserEntity
 import na.gotvimsii.microservices.authms.database.UserTable
 import na.gotvimsii.microservices.authms.helpers.clientIp
+import na.gotvimsii.microservices.authms.security.ECKeyProvider
 import na.gotvimsii.microservices.authms.security.JwtProvider
 import na.gotvimsii.microservices.authms.security.PasswordHasher
 import na.gotvimsii.microservices.authms.security.RedisRateLimit
@@ -35,6 +36,13 @@ import kotlin.time.Duration.Companion.milliseconds
 fun Application.configureRouting() {
     routing {
         swaggerUI("/docs", "openapi/documentation.v1.yaml")
+
+        get("/.well-known/jwks.json") {
+            call.respond(
+                HttpStatusCode.OK,
+                ECKeyProvider.buildJwks()
+            )
+        }
 
         route("/ping") {
             install(RedisRateLimit) {
@@ -260,7 +268,8 @@ fun Application.configureRouting() {
                     val oldRefreshToken = refreshRequest.refreshToken
                     val sessionId = refreshRequest.sessionId
 
-                    val decoded = JwtProvider.verifier()
+                    val decoded = JwtProvider
+                        .refreshTokenVerifier()
                         .verify(oldRefreshToken) // TODO match the `catch` messages to be more indicative of what went wrong
 
                     val tokenType = decoded.claims["type"]?.asString() ?: return@post call.respond(
