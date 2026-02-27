@@ -106,11 +106,12 @@ fun ecPublicKeyToJwk(kid: String, key: ECPublicKey): Map<String, String> {
 }
 
 fun base64Url(value: BigInteger): String {
-    val bytes = value.toByteArray().let {
-        if (it[0] == 0.toByte()) it.drop(1).toByteArray() else it
-    }
+    val bytes = value.toByteArray().stripLeadingZero()
 
     return Base64.getUrlEncoder()
         .withoutPadding()
         .encodeToString(bytes)
 }
+
+private fun ByteArray.stripLeadingZero(): ByteArray =
+    if (size > 1 && this[0] == 0.toByte()) copyOfRange(1, size) else this

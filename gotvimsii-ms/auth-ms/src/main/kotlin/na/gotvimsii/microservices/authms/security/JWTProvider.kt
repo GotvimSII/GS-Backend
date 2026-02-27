@@ -1,13 +1,13 @@
 package na.gotvimsii.microservices.authms.security
 
-import na.gotvimsii.common.security.JwtUtils
+import na.gotvimsii.common.security.JWTUtils
 import na.gotvimsii.common.util.Environment
 import java.util.*
 
 const val JWT_ISSUER = "JWT_ISSUER"
 const val JWT_REALM = "JWT_REALM"
 
-object JwtProvider {
+object JWTProvider {
     private val issuer = Environment[JWT_ISSUER]
     val realm = Environment[JWT_REALM]
 
@@ -18,7 +18,7 @@ object JwtProvider {
     private const val RECIPE_AUDIENCE = "recipe-ms"
 
     fun makeAccessToken(userId: UUID): String =
-        JwtUtils.signToken(
+        JWTUtils.signToken(
             privateKey = ECKeyProvider.privateKey,
             publicKey = ECKeyProvider.publicKey,
             issuer = issuer,
@@ -32,7 +32,7 @@ object JwtProvider {
         )
 
     fun makeRefreshToken(userId: UUID): String =
-        JwtUtils.signToken(
+        JWTUtils.signToken(
             privateKey = ECKeyProvider.privateKey,
             publicKey = ECKeyProvider.publicKey,
             issuer = issuer,
@@ -45,13 +45,13 @@ object JwtProvider {
             audiences = arrayOf(AUTH_AUDIENCE)
         )
 
-    fun accessTokenVerifier() = JwtUtils.verifier(
+    fun accessTokenVerifier() = JWTUtils.verifier(
         publicKey = ECKeyProvider.publicKey,
         issuer = issuer,
         audiences = arrayOf(AUTH_AUDIENCE)
     )
 
-    fun refreshTokenVerifier() = JwtUtils.verifier(
+    fun refreshTokenVerifier() = JWTUtils.verifier(
         publicKey = ECKeyProvider.publicKey,
         issuer = issuer,
         audiences = arrayOf(AUTH_AUDIENCE)

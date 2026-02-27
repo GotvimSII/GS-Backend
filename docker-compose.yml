@@ -37,13 +37,49 @@ services:
         condition: service_healthy
     restart: on-failure
 
+  recipe-ms:
+    image: azul/zulu-openjdk-alpine:21-jre-headless-latest
+    ports:
+      - "7242:7242"
+    env_file:
+      - config/.env.recipe-ms
+    volumes:
+      - ./gotvimsii-ms/recipe-ms/build/libs/recipe-ms-all.jar:/app/recipems.jar
+    command: [ "java", "-jar", "/app/recipems.jar", "-P:migrate=migrate" ]
+    networks:
+      - gotvimsii_backend
+    depends_on:
+      recipe-db:
+        condition: service_healthy
+      auth-ms:
+        condition: service_started
+    restart: on-failure
+
   auth-redis:
     image: redis:8.4.0-alpine
     restart: on-failure
     command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
     volumes:
-      - ./config/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./config/auth_redis.conf:/usr/local/etc/redis/redis.conf
       - auth_redis_data:/data
+    networks:
+      - gotvimsii_backend
+    depends_on:
+      redis-ins:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli", "PING" ]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+
+  recipe-redis:
+    image: redis:8.4.0-alpine
+    restart: on-failure
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    volumes:
+      - ./config/recipe_redis.conf:/usr/local/etc/redis/redis.conf
+      - recipe_redis_data:/data
     networks:
       - gotvimsii_backend
     depends_on:
@@ -85,10 +121,27 @@ services:
       timeout: 5s
       retries: 3
 
+  recipe-db:
+    image: postgres:17.8-trixie
+    restart: on-failure
+    env_file:
+      - config/.env.recipe-db
+    volumes:
+      - gs_recipe_data:/var/lib/postgresql/data
+    networks:
+      - gotvimsii_backend
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+
 volumes:
   gs_auth_data:
   gs_sess_data:
+  gs_recipe_data:
   auth_redis_data:
+  recipe_redis_data:
   redisins_data:
 
 networks:

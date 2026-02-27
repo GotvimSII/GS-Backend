@@ -1,5 +1,7 @@
 package na.gotvimsii.microservices.authms
 
+import dev.nikdi.redisratelimit.RedisRateLimit
+import dev.nikdi.redisratelimit.clientIp
 import eu.vendeli.rethis.command.generic.del
 import eu.vendeli.rethis.command.serde.get
 import eu.vendeli.rethis.command.serde.set
@@ -19,11 +21,9 @@ import na.gotvimsii.common.classes.*
 import na.gotvimsii.common.util.isNotEmail
 import na.gotvimsii.microservices.authms.database.UserEntity
 import na.gotvimsii.microservices.authms.database.UserTable
-import na.gotvimsii.microservices.authms.helpers.clientIp
 import na.gotvimsii.microservices.authms.security.ECKeyProvider
-import na.gotvimsii.microservices.authms.security.JwtProvider
+import na.gotvimsii.microservices.authms.security.JWTProvider
 import na.gotvimsii.microservices.authms.security.PasswordHasher
-import na.gotvimsii.microservices.authms.security.RedisRateLimit
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -46,8 +46,15 @@ fun Application.configureRouting() {
 
         route("/ping") {
             install(RedisRateLimit) {
-                requests = 3
+                rethisInstance = application.services.redis
+                maxRequests = 3
                 windowSeconds = 60
+                onRateLimited = { call ->
+                    call.respond(
+                        HttpStatusCode.TooManyRequests,
+                        ApiError("Too many requests.")
+                    )
+                }
             }
             get {
                 call.respondText("pong :)")
@@ -56,8 +63,15 @@ fun Application.configureRouting() {
 
         route("/register") {
             install(RedisRateLimit) {
-                requests = 5
+                rethisInstance = application.services.redis
+                maxRequests = 5
                 windowSeconds = 60
+                onRateLimited = { call ->
+                    call.respond(
+                        HttpStatusCode.TooManyRequests,
+                        ApiError("Too many requests.")
+                    )
+                }
             }
 
             post {
@@ -154,8 +168,15 @@ fun Application.configureRouting() {
 
         route("/login") {
             install(RedisRateLimit) {
-                requests = 5
+                rethisInstance = application.services.redis
+                maxRequests = 5
                 windowSeconds = 60
+                onRateLimited = { call ->
+                    call.respond(
+                        HttpStatusCode.TooManyRequests,
+                        ApiError("Too many requests.")
+                    )
+                }
             }
 
             post {
@@ -187,8 +208,8 @@ fun Application.configureRouting() {
                     ApiError("Invalid password!")
                 )
 
-                val refreshToken = JwtProvider.makeRefreshToken(user.id.value)
-                val expiresAt = Instant.now().plusMillis(JwtProvider.REFRESH_TOKEN_LIFETIME)
+                val refreshToken = JWTProvider.makeRefreshToken(user.id.value)
+                val expiresAt = Instant.now().plusMillis(JWTProvider.REFRESH_TOKEN_LIFETIME)
                 val refreshHashBytes = MessageDigest.getInstance("SHA-256").digest(refreshToken.toByteArray())
                 val refreshHash = refreshHashBytes.joinToString("") { "%02x".format(it) }
 
@@ -196,7 +217,7 @@ fun Application.configureRouting() {
                     userId = user.id.value,
                     refreshTokenHash = refreshHash,
                     expiresAt = expiresAt,
-                    ipAddress = call.clientIp(),
+                    ipAddress = call.clientIp(), // from the new library
                     userAgent = call.request.userAgent() // these two are SUPER easy to "hijack", but it's still something
                 )
 
@@ -220,17 +241,17 @@ fun Application.configureRouting() {
                                 "refresh:$refreshHash",
                                 redisInformation,
                                 RedisSessionEntry.serializer(),
-                                SetExpire.Px(JwtProvider.REFRESH_TOKEN_LIFETIME.milliseconds)
+                                SetExpire.Px(JWTProvider.REFRESH_TOKEN_LIFETIME.milliseconds)
                             )
                             set(
                                 "session:${sessionId.id}",
                                 RefreshTokenHash(refreshHash),
                                 RefreshTokenHash.serializer(),
-                                SetExpire.Px(JwtProvider.REFRESH_TOKEN_LIFETIME.milliseconds)
+                                SetExpire.Px(JWTProvider.REFRESH_TOKEN_LIFETIME.milliseconds)
                             )
                         }
 
-                        val accessToken = JwtProvider.makeAccessToken(user.id.value)
+                        val accessToken = JWTProvider.makeAccessToken(user.id.value)
 
                         call.respond(
                             HttpStatusCode.OK,
@@ -249,7 +270,8 @@ fun Application.configureRouting() {
 
         route("/refresh") {
             install(RedisRateLimit) {
-                requests = 10
+                rethisInstance = application.services.redis
+                maxRequests = 10
                 windowSeconds = 60
             }
 
@@ -268,7 +290,7 @@ fun Application.configureRouting() {
                     val oldRefreshToken = refreshRequest.refreshToken
                     val sessionId = refreshRequest.sessionId
 
-                    val decoded = JwtProvider
+                    val decoded = JWTProvider
                         .refreshTokenVerifier()
                         .verify(oldRefreshToken) // TODO match the `catch` messages to be more indicative of what went wrong
 
@@ -302,8 +324,8 @@ fun Application.configureRouting() {
                         ApiError("You are not authorized to perform this action!")
                     )
 
-                    val newRefreshToken = JwtProvider.makeRefreshToken(userId)
-                    val expiresAt = Instant.now().plusMillis(JwtProvider.REFRESH_TOKEN_LIFETIME)
+                    val newRefreshToken = JWTProvider.makeRefreshToken(userId)
+                    val expiresAt = Instant.now().plusMillis(JWTProvider.REFRESH_TOKEN_LIFETIME)
                     val newRefreshHashBytes = MessageDigest.getInstance("SHA-256").digest(newRefreshToken.toByteArray())
                     val newRefreshHash = newRefreshHashBytes.joinToString("") { "%02x".format(it) }
 
@@ -332,17 +354,17 @@ fun Application.configureRouting() {
                                 "refresh:$newRefreshHash",
                                 redisInformation,
                                 RedisSessionEntry.serializer(),
-                                SetExpire.Px(JwtProvider.REFRESH_TOKEN_LIFETIME.milliseconds)
+                                SetExpire.Px(JWTProvider.REFRESH_TOKEN_LIFETIME.milliseconds)
                             )
                             set(
                                 "session:$sessionId",
                                 RefreshTokenHash(newRefreshHash),
                                 RefreshTokenHash.serializer(),
-                                SetExpire.Px(JwtProvider.REFRESH_TOKEN_LIFETIME.milliseconds)
+                                SetExpire.Px(JWTProvider.REFRESH_TOKEN_LIFETIME.milliseconds)
                             )
                         }
 
-                        val newAccessToken = JwtProvider.makeAccessToken(userId)
+                        val newAccessToken = JWTProvider.makeAccessToken(userId)
 
                         call.respond(
                             HttpStatusCode.OK,
@@ -362,7 +384,8 @@ fun Application.configureRouting() {
         authenticate("auth-jwt") {
             route("/logout") {
                 install(RedisRateLimit) {
-                    requests = 30
+                    rethisInstance = application.services.redis
+                    maxRequests = 30
                     windowSeconds = 60
                 }
 
@@ -377,7 +400,7 @@ fun Application.configureRouting() {
                         )
                     }
 
-                    val userId = call.principal<AuthUser>()!!.userId
+                    val userId = call.principal<UserPrincipal>()!!.userId
 
                     try {
                         val refreshHash = rethis.get(
@@ -436,7 +459,7 @@ fun Application.configureRouting() {
                 val rethis = application.services.redis
                 val json = application.services.json
 
-                val userId = call.principal<AuthUser>()!!.userId
+                val userId = call.principal<UserPrincipal>()!!.userId
 
                 try {
                     val result = sessionClient.get("/by-user/$userId") {

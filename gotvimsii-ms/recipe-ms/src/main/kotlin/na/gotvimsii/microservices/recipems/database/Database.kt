@@ -1,4 +1,4 @@
-package na.gotvimsii.microservices.authms.database
+package na.gotvimsii.microservices.recipems.database
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
@@ -38,6 +38,6 @@ object DatabaseFactory {
     }
 
     fun close() {
-        if(this::dataSource.isInitialized) dataSource.close()
+        if (this::dataSource.isInitialized) dataSource.close()
     }
 }

@@ -4,8 +4,6 @@ import io.ktor.server.application.*
 import io.ktor.server.netty.*
 import io.ktor.util.*
 import na.gotvimsii.microservices.authms.database.DatabaseFactory
-import na.gotvimsii.microservices.authms.helpers.AppServices
-import na.gotvimsii.microservices.authms.helpers.configureServices
 import na.gotvimsii.microservices.authms.security.configureSecurity
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -21,7 +19,7 @@ fun Application.module() {
     configureServices()
     configureSerialization()
     val shouldMigrate = environment.config.propertyOrNull("migrate")?.getString()
-    val infoLogger: Logger = LoggerFactory.getLogger(this.javaClass.packageName.toString())
+    val infoLogger: Logger = LoggerFactory.getLogger(this.javaClass.packageName)
 
     if (shouldMigrate == "migrate") {
         infoLogger.info("Running with migrations...")
@@ -37,15 +35,15 @@ fun Application.module() {
     monitor.subscribe(ApplicationStopping) {
         log.info("Stopping application gracefully...")
         DatabaseFactory.close()
-    }
-    monitor.subscribe(ApplicationStopped) {
         services.sessionClient.close()
         services.redis.close()
+    }
+    monitor.subscribe(ApplicationStopped) {
         log.info("Application stopped.")
     }
-    Runtime.getRuntime().addShutdownHook(
-        Thread {
-            infoLogger.info("JVM shutdown hook registered.")
-        }
-    )
+//    Runtime.getRuntime().addShutdownHook(
+//        Thread {
+//            infoLogger.info("JVM shutdown hook registered.")
+//        }
+//    )
 }

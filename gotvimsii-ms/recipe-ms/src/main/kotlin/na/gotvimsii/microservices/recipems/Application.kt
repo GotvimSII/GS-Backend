@@ -1,9 +1,11 @@
-package na.gotvimsii.microservices.sessms
+package na.gotvimsii.microservices.recipems
 
 import io.ktor.server.application.*
 import io.ktor.server.netty.*
 import io.ktor.util.*
-import na.gotvimsii.microservices.sessms.database.DatabaseFactory
+import na.gotvimsii.microservices.recipems.database.DatabaseFactory
+import na.gotvimsii.microservices.recipems.helpers.loadRecipesFromFile
+import na.gotvimsii.microservices.recipems.security.configureSecurity
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -16,6 +18,8 @@ val Application.services: AppServices
 
 fun Application.module() {
     configureServices()
+    configureSerialization()
+    configureSecurity()
 
     val shouldMigrate = environment.config.propertyOrNull("migrate")?.getString()
     val infoLogger: Logger = LoggerFactory.getLogger(this.javaClass.packageName)
@@ -28,13 +32,16 @@ fun Application.module() {
         DatabaseFactory.init(false)
     }
 
-    configureSerialization()
+    val recipesLocation = environment.config.propertyOrNull("recipes")
+    if (recipesLocation != null) loadRecipesFromFile(recipesLocation.getString())
+
     configureRouting()
-    configurePeriodicTasks()
 
     monitor.subscribe(ApplicationStopping) {
         log.info("Stopping application gracefully...")
         DatabaseFactory.close()
+        //services.recipeRedis.close()
+        services.rateLimitRedis.close()
     }
     monitor.subscribe(ApplicationStopped) {
         log.info("Application stopped.")

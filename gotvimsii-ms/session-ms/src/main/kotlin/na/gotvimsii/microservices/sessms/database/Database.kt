@@ -22,17 +22,17 @@ object DatabaseFactory {
             maximumPoolSize = 10
         }
 
+        dataSource = HikariDataSource(config)
+
         Flyway.configure()
             .driver(config.driverClassName)
-            .dataSource(config.jdbcUrl, config.username, config.password)
+            .dataSource(this@DatabaseFactory.dataSource)
             .skipDefaultCallbacks(true)
             .locations("classpath:db/migration")
             .validateMigrationNaming(true)
             .baselineOnMigrate(true)
             .load()
             .also { if (migrate) it.migrate() }
-
-        dataSource = HikariDataSource(config)
 
         Database.connect(dataSource)
     }

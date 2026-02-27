@@ -41,4 +41,4 @@ data class ApiSuccess(
 )
 
 @Serializable
-data class AuthUser(val userId: UUID)
+data class UserPrincipal(val userId: UUID)

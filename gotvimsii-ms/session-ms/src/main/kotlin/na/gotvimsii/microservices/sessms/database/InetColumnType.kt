@@ -6,7 +6,7 @@ import org.jetbrains.exposed.v1.core.statements.api.PreparedStatementApi
 import org.postgresql.util.PGobject
 
 class InetColumnType : StringColumnType() {
-    override fun sqlType(): String = "INET"
+    override fun sqlType(): String = "inet"
 
     override fun setParameter(stmt: PreparedStatementApi, index: Int, value: Any?) {
         val parameterValue: PGobject? = value?.let {

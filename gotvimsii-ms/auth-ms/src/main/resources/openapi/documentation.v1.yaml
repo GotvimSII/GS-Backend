@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: GotvimSII AuthMS
   description: The GotvimSII Authentication Microservice Documentation
-  version: 1.1.0
+  version: 1.2.0
 
 servers:
   - url: /
@@ -136,6 +136,10 @@ components:
 
 
 paths:
+  /.well-known/jwks.json:
+    get:
+      description: Return the list of well-known JWKS.
+
   /ping:
     get:
       description: Verifies that the API is running (although if it weren't, documentation wouldn't be available).
@@ -303,7 +307,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RefreshReyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9esponse'
+                $ref: '#/components/schemas/RefreshResponse'
 
         400:
           description: Invalid or malformed refresh token
