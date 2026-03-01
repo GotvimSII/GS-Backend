@@ -2,6 +2,7 @@
 
 package na.gotvimsii.microservices.authms
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
 import na.gotvimsii.common.classes.serializers.InstantSerializer
@@ -24,8 +25,26 @@ data class RegistrationCredentials(
 @Serializable
 data class LoginCredentials(
     val email: String,
-    val username: String,
     val password: String
+)
+
+@Serializable
+data class LoginResponse(
+    @SerialName("access_token") val accessToken: String,
+    @SerialName("refresh_token") val refreshToken: String,
+    @SerialName("session_id") val sessionId: UUID
+)
+
+@Serializable
+data class RefreshRequest(
+    @SerialName("refresh_token") val refreshToken: String,
+    @SerialName("session_id") val sessionId: UUID
+)
+
+@Serializable
+data class RefreshResponse(
+    @SerialName("access_token") val accessToken: String,
+    @SerialName("refresh_token") val refreshToken: String
 )
 
 @Serializable

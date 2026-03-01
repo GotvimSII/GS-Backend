@@ -191,11 +191,10 @@ fun Application.configureRouting() {
                 }
 
                 val email = loginCredentials.email
-                val username = loginCredentials.username
                 val password = loginCredentials.password
 
                 val user = transaction {
-                    UserEntity.find { (UserTable.email eq email) or (UserTable.username eq username) }.singleOrNull()
+                    UserEntity.find { (UserTable.email eq email) }.singleOrNull()
                 } ?: return@post call.respond(
                     HttpStatusCode.NotFound,
                     ApiError("User not found!")

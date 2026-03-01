@@ -52,10 +52,10 @@ internal fun Application.configureRouting() {
         }
 
         authenticate("auth-jwt") {
-            route("/recipes") {
+            route("/") {
                 install(RedisRateLimit) {
                     rethisInstance = services.rateLimitRedis
-                    maxRequests = 5
+                    maxRequests = 30
                     onRateLimited = { call ->
                         call.respond(
                             HttpStatusCode.TooManyRequests,
@@ -64,13 +64,13 @@ internal fun Application.configureRouting() {
                     }
                 }
 
-                get("/by-name") {
-                    val name = runCatching { call.receive<RecipeName>() }.getOrElse {
-                        return@get call.respond(
+                post("by-name") {
+                    val name = runCatching { call.receive<NameRequest>().name }.getOrElse {
+                        return@post call.respond(
                             HttpStatusCode.BadRequest,
                             ApiError("No recipe name provided!")
                         )
-                    }.name
+                    }
 
                     when (val result = recipeSearchService.searchByName(name)) {
                         is RecipeSearchResult.Found -> {
@@ -83,7 +83,7 @@ internal fun Application.configureRouting() {
                         }
 
                         is RecipeSearchResult.NotFound -> call.respond(
-                            HttpStatusCode.OK,
+                            HttpStatusCode.NotFound,
                             NoRecipeFound("No recipes were found!")
                         )
 
@@ -94,9 +94,9 @@ internal fun Application.configureRouting() {
                     }
                 }
 
-                get("/from-ingredients") {
+                post("from-ingredients") {
                     val request = runCatching { call.receive<IngredientRequest>() }.getOrElse { cause ->
-                        return@get call.respond(
+                        return@post call.respond(
                             HttpStatusCode.BadRequest,
                             ApiError("Invalid request format. 'mode' must be 'all' or 'exact'. ${cause.toString()}")
                         )
@@ -116,7 +116,7 @@ internal fun Application.configureRouting() {
                         }
 
                         is RecipeSearchResult.NotFound -> call.respond(
-                            HttpStatusCode.OK,
+                            HttpStatusCode.NotFound,
                             NoRecipeFound("No recipes were found!")
                         )
 
@@ -127,22 +127,25 @@ internal fun Application.configureRouting() {
                     }
                 }
 
-                get("/regenerate/{requestId}") {
+                post("regenerate/{requestId}") {
                     val requestId = call.pathParameters["requestId"]?.let(UUID::fromString)
-                        ?: return@get call.respond(
+                        ?: return@post call.respond(
                             HttpStatusCode.BadRequest,
                             ApiError("No request ID provided!")
                         )
 
-                    val recipeId = recipeRedisService.getNextStoredId(requestId) ?: return@get call.respond(
-                        HttpStatusCode.OK,
+                    val recipeId = recipeRedisService.getNextStoredId(requestId) ?: return@post call.respond(
+                        HttpStatusCode.NotFound,
                         NoRecipeFound("No recipes were found!")
                     )
 
                     val recipe = recipeSearchService.getRecipeWithIngredients(recipeId)
                     call.respond(
                         HttpStatusCode.OK,
-                        recipe
+                        RecipeResponse(
+                            recipe,
+                            requestId
+                        )
                     )
                 }
             }

@@ -4,10 +4,13 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import na.gotvimsii.common.classes.serializers.UUIDSerializer
 import na.gotvimsii.microservices.recipems.helpers.IngredientMatchMode
-import java.util.UUID
+import java.util.*
 
 @Serializable
-data class RecipeName(val name: String)
+data class NameRequest(
+    val name: String,
+    val portions: Int
+)
 
 @Serializable
 data class IngredientRequest(
