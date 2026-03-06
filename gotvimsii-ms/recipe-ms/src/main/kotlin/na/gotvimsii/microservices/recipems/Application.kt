@@ -18,6 +18,7 @@ val Application.services: AppServices
 
 fun Application.module() {
     configureServices()
+    configureReverseProxy()
     configureSerialization()
     configureSecurity()
 
@@ -40,15 +41,10 @@ fun Application.module() {
     monitor.subscribe(ApplicationStopping) {
         log.info("Stopping application gracefully...")
         DatabaseFactory.close()
-        //services.recipeRedis.close()
+        services.recipeRedis.close()
         services.rateLimitRedis.close()
     }
     monitor.subscribe(ApplicationStopped) {
         log.info("Application stopped.")
     }
-//    Runtime.getRuntime().addShutdownHook(
-//        Thread {
-//            infoLogger.info("JVM shutdown hook registered.")
-//        }
-//    )
 }

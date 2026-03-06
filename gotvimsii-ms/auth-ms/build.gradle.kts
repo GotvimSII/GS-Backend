@@ -42,6 +42,7 @@ dependencies {
     implementation(libs.argon2.jvm.nolibs)
     implementation(libs.rethis)
     implementation(libs.redis.rate.limit)
+    implementation(libs.ktor.server.forwarded.header)
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
 }

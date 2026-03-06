@@ -32,4 +32,6 @@ dependencies {
     implementation(libs.ktor.server.swagger)
     implementation(libs.ktor.server.netty)
     implementation(libs.logback.classic)
+    implementation(libs.junixsocket.core)
+    implementation(libs.ktor.server.forwarded.header)
 }

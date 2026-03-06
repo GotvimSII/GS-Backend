@@ -39,9 +39,4 @@ fun Application.module() {
     monitor.subscribe(ApplicationStopped) {
         log.info("Application stopped.")
     }
-//    Runtime.getRuntime().addShutdownHook(
-//        Thread {
-//            infoLogger.info("JVM shutdown hook registered.")
-//        }
-//    )
 }

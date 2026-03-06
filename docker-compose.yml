@@ -45,6 +45,7 @@ services:
       - config/.env.recipe-ms
     volumes:
       - ./gotvimsii-ms/recipe-ms/build/libs/recipe-ms-all.jar:/app/recipems.jar
+      - /tmp/rllm/daemon.sock:/socket/daemon.sock
     command: [ "java", "-jar", "/app/recipems.jar", "-P:migrate=migrate" ]
     networks:
       - gotvimsii_backend

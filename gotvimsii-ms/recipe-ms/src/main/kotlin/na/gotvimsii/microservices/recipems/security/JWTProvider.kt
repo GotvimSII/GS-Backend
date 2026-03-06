@@ -17,7 +17,7 @@ object JWTProvider {
     val issuer = Environment[JWT_ISSUER]
     val realm = Environment[JWT_REALM]
 
-    val jwkProvider: JwkProvider = JwkProviderBuilder(URI.create("$authMsUrl/.well-known/jwks.json").toURL())
+    val jwkProvider: JwkProvider = JwkProviderBuilder(URI.create("$authMsUrl/auth/.well-known/jwks.json").toURL())
         .cached(10, 24, TimeUnit.HOURS)
         .rateLimited(10, 1, TimeUnit.HOURS)
         .build()

@@ -26,6 +26,8 @@ fun Application.configureServices() {
         prettyPrint = true
         isLenient = true
         ignoreUnknownKeys = true
+        coerceInputValues = true
+        encodeDefaults = true
     }
 
     val recipeJson = Json {

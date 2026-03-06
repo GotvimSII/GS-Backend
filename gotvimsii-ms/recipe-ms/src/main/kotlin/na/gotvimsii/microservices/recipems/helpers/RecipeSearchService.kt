@@ -82,7 +82,7 @@ class RecipeSearchService(
         }
     }
 
-    fun getRecipeWithIngredients(recipeId: Int): MatchedRecipe = transaction {
+    fun getRecipeWithIngredients(recipeId: Int, portions: Int): MatchedRecipe = transaction {
         val quantity = coalesce(
             concat(
                 RecipesIngredientsTable.quantity.castToText().nullIf(stringLiteral("")),
@@ -118,6 +118,7 @@ class RecipeSearchService(
                 MatchedRecipe(
                     id = row[RecipesTable.id].value,
                     title = row[RecipesTable.title],
+                    portions = portions,
                     preparationTime = row[RecipesTable.preparationTime],
                     ingredients = row[ingredientsAgg],
                     instructions = row[RecipesTable.instructions]

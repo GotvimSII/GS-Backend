@@ -17,6 +17,7 @@ val Application.services: AppServices
 
 fun Application.module() {
     configureServices()
+    configureReverseProxy()
     configureSerialization()
     val shouldMigrate = environment.config.propertyOrNull("migrate")?.getString()
     val infoLogger: Logger = LoggerFactory.getLogger(this.javaClass.packageName)
@@ -41,9 +42,4 @@ fun Application.module() {
     monitor.subscribe(ApplicationStopped) {
         log.info("Application stopped.")
     }
-//    Runtime.getRuntime().addShutdownHook(
-//        Thread {
-//            infoLogger.info("JVM shutdown hook registered.")
-//        }
-//    )
 }

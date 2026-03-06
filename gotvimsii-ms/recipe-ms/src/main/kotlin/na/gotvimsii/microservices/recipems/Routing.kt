@@ -8,6 +8,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import na.gotvimsii.common.classes.ApiError
+import na.gotvimsii.microservices.recipems.helpers.QueueSocketClient
 import na.gotvimsii.microservices.recipems.helpers.RecipeRedisService
 import na.gotvimsii.microservices.recipems.helpers.RecipeSearchResult
 import na.gotvimsii.microservices.recipems.helpers.RecipeSearchService
@@ -16,46 +17,44 @@ import java.util.*
 internal fun Application.configureRouting() {
     val recipeRedisService = RecipeRedisService(services.recipeRedis)
     val recipeSearchService = RecipeSearchService(log)
+    val socketClient = QueueSocketClient(services.recipeJson)
 
-    suspend fun storeAndRespond(call: ApplicationCall, requestId: UUID, recipeIds: List<Int>) {
-        recipeRedisService.storeObtainedRecipesInRedis(requestId, recipeIds)
-
-        val recipeId = recipeRedisService.getNextStoredId(requestId) ?: return call.respond(
-            HttpStatusCode.OK,
-            NoRecipeFound("No recipes were found!")
-        )
-
-        val recipe = recipeSearchService.getRecipeWithIngredients(recipeId)
-        call.respond(
-            HttpStatusCode.OK,
-            RecipeResponse(
-                recipe,
-                requestId
+    suspend fun ApplicationCall.respondWithNextRecipe(requestId: UUID) {
+        val recipeDetails = recipeRedisService.getNextStoredId(requestId)
+            ?: return this.respond(
+                HttpStatusCode.NotFound,
+                NoRecipeFound("No recipes were found!")
             )
-        )
+
+        val matchedRecipe = recipeSearchService.getRecipeWithIngredients(recipeDetails.first, recipeDetails.second)
+
+        runCatching {
+            socketClient.sendRequest(matchedRecipe)
+                ?: error("Socket returned null")
+        }.onSuccess { formattedRecipe ->
+            this.respond(
+                HttpStatusCode.OK,
+                RecipeResponse(formattedRecipe, requestId)
+            )
+        }.onFailure {
+            this.respond(
+                HttpStatusCode.InternalServerError,
+                ApiError("An error occurred, please try again!")
+            )
+        }
+    }
+
+    suspend fun storeAndRespond(call: ApplicationCall, requestId: UUID, recipeIds: List<Int>, portions: Int) {
+        recipeRedisService.storeObtainedRecipesInRedis(requestId, recipeIds, portions)
+        call.respondWithNextRecipe(requestId)
     }
 
     routing {
-        route("/ping") {
-            install(RedisRateLimit) {
-                rethisInstance = services.rateLimitRedis
-                maxRequests = 5
-                onRateLimited = { call ->
-                    call.respond(
-                        HttpStatusCode.TooManyRequests,
-                        ApiError("Too many requests!")
-                    )
-                }
-            }
-
-            get { call.respondText("pong :)") }
-        }
-
-        authenticate("auth-jwt") {
-            route("/") {
+        route("/recipes") {
+            route("/ping") {
                 install(RedisRateLimit) {
                     rethisInstance = services.rateLimitRedis
-                    maxRequests = 30
+                    maxRequests = 5
                     onRateLimited = { call ->
                         call.respond(
                             HttpStatusCode.TooManyRequests,
@@ -64,89 +63,93 @@ internal fun Application.configureRouting() {
                     }
                 }
 
-                post("by-name") {
-                    val name = runCatching { call.receive<NameRequest>().name }.getOrElse {
-                        return@post call.respond(
-                            HttpStatusCode.BadRequest,
-                            ApiError("No recipe name provided!")
-                        )
+                get { call.respondText("pong :)") }
+            }
+
+            authenticate("auth-jwt") {
+                route("/") {
+                    install(RedisRateLimit) {
+                        rethisInstance = services.rateLimitRedis
+                        maxRequests = 30
+                        onRateLimited = { call ->
+                            call.respond(
+                                HttpStatusCode.TooManyRequests,
+                                ApiError("Too many requests!")
+                            )
+                        }
                     }
 
-                    when (val result = recipeSearchService.searchByName(name)) {
-                        is RecipeSearchResult.Found -> {
-                            val requestUUID = UUID.randomUUID()
-                            storeAndRespond(
-                                call,
-                                requestUUID,
-                                result.ids
+                    post("by-name") {
+                        val request = runCatching { call.receive<NameRequest>() }.getOrElse {
+                            return@post call.respond(
+                                HttpStatusCode.BadRequest,
+                                ApiError("No recipe name provided!")
                             )
                         }
 
-                        is RecipeSearchResult.NotFound -> call.respond(
-                            HttpStatusCode.NotFound,
-                            NoRecipeFound("No recipes were found!")
-                        )
+                        when (val result = recipeSearchService.searchByName(request.name)) {
+                            is RecipeSearchResult.Found -> {
+                                val requestUUID = UUID.randomUUID()
+                                storeAndRespond(
+                                    call,
+                                    requestUUID,
+                                    result.ids,
+                                    request.portions
+                                )
+                            }
 
-                        is RecipeSearchResult.Error -> call.respond(
-                            HttpStatusCode.InternalServerError,
-                            ApiError(result.message)
-                        )
+                            is RecipeSearchResult.NotFound -> call.respond(
+                                HttpStatusCode.NotFound,
+                                NoRecipeFound("No recipes were found!")
+                            )
+
+                            is RecipeSearchResult.Error -> call.respond(
+                                HttpStatusCode.InternalServerError,
+                                ApiError(result.message)
+                            )
+                        }
                     }
-                }
 
-                post("from-ingredients") {
-                    val request = runCatching { call.receive<IngredientRequest>() }.getOrElse { cause ->
-                        return@post call.respond(
-                            HttpStatusCode.BadRequest,
-                            ApiError("Invalid request format. 'mode' must be 'all' or 'exact'. ${cause.toString()}")
-                        )
-                    }
-
-                    val ingredients = request.ingredients
-                    val mode = request.mode
-
-                    when (val result = recipeSearchService.searchByIngredients(ingredients, mode)) {
-                        is RecipeSearchResult.Found -> {
-                            val requestUUID = UUID.randomUUID()
-                            storeAndRespond(
-                                call,
-                                requestUUID,
-                                result.ids
+                    post("from-ingredients") {
+                        val request = runCatching { call.receive<IngredientRequest>() }.getOrElse { cause ->
+                            return@post call.respond(
+                                HttpStatusCode.BadRequest,
+                                ApiError("Invalid request format. 'mode' must be 'all' or 'exact'. ${cause.toString()}")
                             )
                         }
 
-                        is RecipeSearchResult.NotFound -> call.respond(
-                            HttpStatusCode.NotFound,
-                            NoRecipeFound("No recipes were found!")
-                        )
+                        when (val result = recipeSearchService.searchByIngredients(request.ingredients, request.mode)) {
+                            is RecipeSearchResult.Found -> {
+                                val requestUUID = UUID.randomUUID()
+                                storeAndRespond(
+                                    call,
+                                    requestUUID,
+                                    result.ids,
+                                    request.portions
+                                )
+                            }
 
-                        is RecipeSearchResult.Error -> call.respond(
-                            HttpStatusCode.InternalServerError,
-                            ApiError(result.message)
-                        )
+                            is RecipeSearchResult.NotFound -> call.respond(
+                                HttpStatusCode.NotFound,
+                                NoRecipeFound("No recipes were found!")
+                            )
+
+                            is RecipeSearchResult.Error -> call.respond(
+                                HttpStatusCode.InternalServerError,
+                                ApiError(result.message)
+                            )
+                        }
                     }
-                }
 
-                post("regenerate/{requestId}") {
-                    val requestId = call.pathParameters["requestId"]?.let(UUID::fromString)
-                        ?: return@post call.respond(
-                            HttpStatusCode.BadRequest,
-                            ApiError("No request ID provided!")
-                        )
+                    post("regenerate/{requestId}") {
+                        val requestId = call.pathParameters["requestId"]?.let(UUID::fromString)
+                            ?: return@post call.respond(
+                                HttpStatusCode.BadRequest,
+                                ApiError("No request ID provided!")
+                            )
 
-                    val recipeId = recipeRedisService.getNextStoredId(requestId) ?: return@post call.respond(
-                        HttpStatusCode.NotFound,
-                        NoRecipeFound("No recipes were found!")
-                    )
-
-                    val recipe = recipeSearchService.getRecipeWithIngredients(recipeId)
-                    call.respond(
-                        HttpStatusCode.OK,
-                        RecipeResponse(
-                            recipe,
-                            requestId
-                        )
-                    )
+                        call.respondWithNextRecipe(requestId)
+                    }
                 }
             }
         }
